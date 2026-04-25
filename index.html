@@ -1,263 +1,163 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>🚋 Smart Tram + ETA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where’s My Tram?</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-}
-
-.header {
-  text-align: center;
-  padding: 15px;
-  font-size: 22px;
-  font-weight: bold;
-}
-
-/* MAP */
-.map {
-  position: relative;
-  width: 100%;
-  height: 450px;
-  background: #14532d;
-  border-top: 3px solid #22c55e;
-  overflow: hidden;
-}
-
-/* station */
-.station {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: gray;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.active {
-  background: red;
-  box-shadow: 0 0 10px red;
-}
-
-/* label */
-.label {
-  position: absolute;
-  font-size: 12px;
-  transform: translate(-50%, -50%);
-  margin-top: 18px;
-}
-
-/* tram */
-#tram {
-  position: absolute;
-  font-size: 28px;
-  transform: translate(-50%, -50%);
-  transition: all 0.8s ease;
-}
-
-/* panel */
-.panel {
-  padding: 10px;
-}
-
-.card {
-  background: #1e293b;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  padding: 6px;
-  border-bottom: 1px solid #334155;
-  font-size: 13px;
-}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Prompt',sans-serif;background:#fff9e8;color:#4b4120}
+.page{max-width:1400px;margin:auto;padding:20px}
+.header{text-align:center;margin-bottom:20px}
+.header h1{margin:0;font-size:32px}
+.header p{margin:8px 0 0;color:#9f8b56}
+.layout{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.panel{background:#fffdf4;border:1px solid #efdfac;border-radius:22px;padding:18px;box-shadow:0 10px 24px rgba(190,160,70,.12)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.title{font-size:18px;font-weight:700}
+.live{font-size:12px;font-weight:700;background:#fff0ad;border:1px solid #ead26b;border-radius:20px;padding:6px 12px;color:#8a6e00}
+.map{position:relative;height:70vh;min-height:420px;max-height:760px;background:#f7f0d8;border:1px solid #efdfac;border-radius:18px;overflow:hidden}
+.map img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#tram{position:absolute;font-size:34px;transform:translate(-95%,-100%);transition:.8s;z-index:2}
+.card{background:#fffaf0;border:1px solid #efdfac;border-radius:18px;padding:14px 16px;margin-bottom:16px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #f3e7c2}
+.row:last-child{border-bottom:0}
+.label{color:#9f8b56}
+.value{font-weight:600;text-align:right}
+.good{color:#43a047}.medium{color:#f9a825}.bad{color:#ef6c57}
+.note{font-size:13px;color:#9f8b56;margin-top:10px}
+ul{list-style:none;padding:0;margin:0;max-height:360px;overflow:auto}
+li{padding:10px 0;border-bottom:1px solid #f3e7c2}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.map{height:52vh}}
 </style>
 </head>
 
 <body>
-
-<div class="header">🚋 Smart Tram System + ETA</div>
-
-<!-- ================= MAP ================= -->
-<div class="map" id="map">
-
-  <div id="s1" class="station"></div>
-  <div id="l1" class="label">ประตูเขียว</div>
-
-  <div id="s2" class="station"></div>
-  <div id="l2" class="label">โรงโภชนาการ 1</div>
-
-  <div id="s3" class="station"></div>
-  <div id="l3" class="label">หน้าม.</div>
-
-  <div id="tram">🚋</div>
-
-</div>
-
-<!-- ================= STATUS ================= -->
-<div class="panel">
-  <div class="card">
-    📍 Station: <span id="station">-</span><br>
-    📶 RSSI: <span id="rssi">-</span><br>
-    🕒 Time: <span id="time">-</span><br>
-    ⏱ ETA Next: <span id="next">-</span>
+<div class="page">
+  <div class="header">
+    <h1>🚋 Where’s My Tram?</h1>
+    <p>Real-time tracking. No more guessing. 👀</p>
   </div>
 
-  <div class="card">
-    <h3>📜 History</h3>
-    <ul id="logs"></ul>
+  <div class="layout">
+    <div class="panel">
+      <div class="top">
+        <div class="title">Live Tracking Map</div>
+        <div class="live">● LIVE</div>
+      </div>
+      <div class="map">
+        <img src="./a.png" alt="Map">
+        <div id="tram">🚋</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="row"><span class="label">📍 Station</span><span class="value" id="station">-</span></div>
+        <div class="row"><span class="label">📶 RSSI</span><span class="value" id="rssi">-</span></div>
+        <div class="row"><span class="label">🕒 Date & Time</span><span class="value" id="time">-</span></div>
+        <div class="row"><span class="label">⏱ ETA</span><span class="value" id="next">-</span></div>
+        <div class="note" id="updated">Last updated: -</div>
+      </div>
+
+      <div class="card">
+        <h3>📜 History</h3>
+        <ul id="logs"><li>ยังไม่มีข้อมูล</li></ul>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-
-// ================= FORMAT TIME =================
-function formatThaiTime(isoString) {
-  const d = new Date(isoString);
-
-  const pad = (n) => n.toString().padStart(2, '0');
-
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} `
-       + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-// ================= FIREBASE =================
 firebase.initializeApp({
-  databaseURL: "https://trackingrealtime-9a5a1-default-rtdb.firebaseio.com"
+  databaseURL:"https://trackingrealtime-9a5a1-default-rtdb.firebaseio.com"
 });
+const db=firebase.database();
 
-const db = firebase.database();
-
-// ================= MAP DATA =================
-const stations = {
-  "ประตูเขียว": {x: 120, y: 120, id: "s1"},
-  "โรงโภชนาการ 1": {x: 300, y: 200, id: "s2"},
-  "หน้าม.": {x: 200, y: 350, id: "s3"}
+const stations={
+  "ประตูเขียว":{x:9.5,y:40.5},
+  "โรงโภชนาการ 1":{x:48.5,y:24.5},
+  "หน้ามหาวิทยาลัย":{x:82.5,y:71.5}
 };
 
-const stationOrder = ["ประตูเขียว","โรงโภชนาการ 1","หน้าม."];
+const order=["ประตูเขียว","โรงโภชนาการ 1","หน้ามหาวิทยาลัย"];
+let lastUpdate=null;
 
-// ================= ETA CONFIG =================
-const AVG_TIME_PER_STATION = 15; // ⏱ ปรับได้ (วินาที)
-
-// ================= SCALE =================
-function getScale() {
-  const map = document.getElementById("map");
-  return {
-    sx: map.clientWidth / 400,
-    sy: map.clientHeight / 450
-  };
-}
-
-// ================= APPLY POSITIONS =================
-function applyStations() {
-  const scale = getScale();
-
-  Object.keys(stations).forEach(name => {
-
-    const s = stations[name];
-
-    const x = s.x * scale.sx;
-    const y = s.y * scale.sy;
-
-    document.getElementById(s.id).style.left = x + "px";
-    document.getElementById(s.id).style.top = y + "px";
-
-    document.getElementById("l" + s.id.replace("s","")).style.left = x + "px";
-    document.getElementById("l" + s.id.replace("s","")).style.top = (y + 18) + "px";
+/* 🔥 แก้ตรงนี้: แสดง "วัน + เวลา" */
+function time(t){
+  if(!t)return "-";
+  return new Date(t).toLocaleString("th-TH",{
+    year:"numeric",
+    month:"short",
+    day:"numeric",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit"
   });
 }
 
-// ================= ETA CALC =================
-function calculateETA(currentStation) {
-  let i = stationOrder.indexOf(currentStation);
-
-  let next = stationOrder[(i + 1) % stationOrder.length];
-
-  return {
-    nextStation: next,
-    eta: AVG_TIME_PER_STATION
-  };
+function rssiText(r){
+  const n=Number(r);
+  if(isNaN(n))return {text:"-",cls:""};
+  if(n>=-60)return {text:n+" dBm · Strong",cls:"good"};
+  if(n>=-80)return {text:n+" dBm · Fair",cls:"medium"};
+  return {text:n+" dBm · Weak",cls:"bad"};
 }
 
-// ================= MOVE TRAM =================
-function moveTram(station, rssi, time){
+function moveTram(station,rssi,t){
+  const p=stations[station];
+  if(!p)return;
 
-  const pos = stations[station];
-  if (!pos) return;
+  tram.style.left=p.x+"%";
+  tram.style.top=p.y+"%";
 
-  const scale = getScale();
+  document.getElementById("station").innerText=station;
 
-  const x = pos.x * scale.sx;
-  const y = pos.y * scale.sy;
+  const r=rssiText(rssi);
+  const rssiEl=document.getElementById("rssi");
+  rssiEl.innerText=r.text;
+  rssiEl.className="value "+r.cls;
 
-  // clear active
-  document.querySelectorAll(".station").forEach(s=>{
-    s.classList.remove("active");
-  });
+  document.getElementById("time").innerText=time(t);
 
-  document.getElementById(pos.id).classList.add("active");
+  const i=order.indexOf(station);
+  const next=i>=0?order[(i+1)%order.length]:"-";
+  document.getElementById("next").innerText=next==="-"?"-":next+" (~15s)";
 
-  // move tram
-  const tram = document.getElementById("tram");
-  tram.style.left = x + "px";
-  tram.style.top = y + "px";
-
-  // UI
-  document.getElementById("station").innerText = station;
-  document.getElementById("rssi").innerText = rssi;
-  document.getElementById("time").innerText = formatThaiTime(time);
-
-  // ETA
-  const eta = calculateETA(station);
-  document.getElementById("next").innerText =
-    `${eta.nextStation} (~${eta.eta} sec)`;
+  lastUpdate=Date.now();
+  updateTime();
 }
 
-// ================= FIREBASE LIVE =================
-db.ref("tram/status").on("value", (snap) => {
-  const d = snap.val();
-  if (!d) return;
+function updateTime(){
+  document.getElementById("updated").innerText=
+    lastUpdate ? "Last updated: "+Math.floor((Date.now()-lastUpdate)/1000)+"s ago" : "Last updated: -";
+}
 
-  moveTram(d.station, d.rssi, d.time);
+db.ref("tram/status").on("value",snap=>{
+  const d=snap.val();
+  if(d)moveTram(d.station,d.rssi,d.time);
 });
 
-// ================= HISTORY =================
-db.ref("tram/logs").limitToLast(10).on("value", (snap) => {
-  const data = snap.val();
-  const list = document.getElementById("logs");
-  list.innerHTML = "";
+db.ref("tram/logs").limitToLast(10).on("value",snap=>{
+  const list=document.getElementById("logs");
+  const data=snap.val();
+  list.innerHTML="";
+  if(!data){list.innerHTML="<li>ยังไม่มีข้อมูล</li>";return;}
 
-  for (let id in data) {
-    let li = document.createElement("li");
-    li.innerText = `${data[id].station} | ${formatThaiTime(data[id].time)}`;
-    list.appendChild(li);
-  }
+  Object.values(data)
+    .sort((a,b)=>new Date(b.time)-new Date(a.time))
+    .forEach(item=>{
+      const li=document.createElement("li");
+      li.innerText=(item.station||"-")+" | "+time(item.time);
+      list.appendChild(li);
+    });
 });
 
-// ================= INIT =================
-window.onload = function(){
-  applyStations();
-};
-
-window.onresize = function(){
-  applyStations();
-};
-
+setInterval(updateTime,1000);
 </script>
-
 </body>
 </html>
