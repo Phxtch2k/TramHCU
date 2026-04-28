@@ -3,161 +3,303 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Where’s My Tram?</title>
+<title>Where’s My Tram? - Real-time Tracking</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase.js"></script>
 
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:'Prompt',sans-serif;background:#fff9e8;color:#4b4120}
-.page{max-width:1400px;margin:auto;padding:20px}
-.header{text-align:center;margin-bottom:20px}
-.header h1{margin:0;font-size:32px}
-.header p{margin:8px 0 0;color:#9f8b56}
-.layout{display:grid;grid-template-columns:2fr 1fr;gap:20px}
-.panel{background:#fffdf4;border:1px solid #efdfac;border-radius:22px;padding:18px;box-shadow:0 10px 24px rgba(190,160,70,.12)}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.title{font-size:18px;font-weight:700}
-.live{font-size:12px;font-weight:700;background:#fff0ad;border:1px solid #ead26b;border-radius:20px;padding:6px 12px;color:#8a6e00}
-.map{position:relative;height:70vh;min-height:420px;max-height:760px;background:#f7f0d8;border:1px solid #efdfac;border-radius:18px;overflow:hidden}
-.map img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-#tram{position:absolute;font-size:34px;transform:translate(-95%,-100%);transition:.8s;z-index:2}
-.card{background:#fffaf0;border:1px solid #efdfac;border-radius:18px;padding:14px 16px;margin-bottom:16px}
-.row{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #f3e7c2}
-.row:last-child{border-bottom:0}
-.label{color:#9f8b56}
-.value{font-weight:600;text-align:right}
-.good{color:#43a047}.medium{color:#f9a825}.bad{color:#ef6c57}
-.note{font-size:13px;color:#9f8b56;margin-top:10px}
-ul{list-style:none;padding:0;margin:0;max-height:360px;overflow:auto}
-li{padding:10px 0;border-bottom:1px solid #f3e7c2}
-@media(max-width:900px){.layout{grid-template-columns:1fr}.map{height:52vh}}
+    :root {
+        --bg-color: #fff9e8;
+        --panel-bg: #fffdf4;
+        --accent-color: #efdfac;
+        --text-main: #4b4120;
+        --text-sub: #9f8b56;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body { 
+        margin: 0; 
+        font-family: 'Prompt', sans-serif; 
+        background: var(--bg-color); 
+        color: var(--text-main); 
+        padding: 10px;
+    }
+
+    .page { 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
+
+    .header { text-align: center; margin: 20px 0; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .header p { margin: 5px 0; color: var(--text-sub); font-size: 14px; }
+
+    /* Layout: Desktop ใช้ 2 คอลัมน์ / Mobile ใช้คอลัมน์เดียว */
+    .layout { 
+        display: grid; 
+        grid-template-columns: 1fr 340px; 
+        gap: 20px; 
+    }
+
+    .panel { 
+        background: var(--panel-bg); 
+        border: 1px solid var(--accent-color); 
+        border-radius: 24px; 
+        padding: 20px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+
+    .top-bar { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 15px; 
+    }
+    
+    .title { font-weight: 700; font-size: 18px; }
+    .live-tag { 
+        font-size: 12px; 
+        background: #ffeb3b; 
+        padding: 4px 12px; 
+        border-radius: 20px; 
+        font-weight: bold;
+        animation: blink 1.5s infinite;
+    }
+
+    /* --- ส่วนแผนที่ที่แก้ไขให้เป๊ะ --- */
+    .map-box {
+        position: relative;
+        width: 100%;
+        background: #eee;
+        border-radius: 16px;
+        overflow: hidden;
+        /* ป้องกันช่องว่างจุกจิก */
+        line-height: 0; 
+    }
+
+    .map-stage {
+        position: relative;
+        width: 100%;
+        height: auto;
+        display: inline-block;
+    }
+
+    .map-stage img {
+        width: 100%;
+        height: auto; /* ให้ความสูงปรับตามสัดส่วนรูปภาพจริงเสมอ */
+        display: block;
+    }
+
+    #tram {
+        position: absolute;
+        /* ปรับพิกัดอ้างอิงจากกึ่งกลาง Emoji */
+        transform: translate(-50%, -40%); 
+        font-size: clamp(24px, 5vw, 40px); /* ย่อขยายตามขนาดจอ */
+        transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+    }
+
+    /* --- ส่วนข้อมูล --- */
+    .info-card { 
+        background: #fff; 
+        border: 1px solid var(--accent-color); 
+        border-radius: 16px; 
+        padding: 16px; 
+        margin-bottom: 15px; 
+    }
+    
+    .info-row { 
+        display: flex; 
+        justify-content: space-between; 
+        padding: 10px 0; 
+        border-bottom: 1px solid #f9f4e8; 
+    }
+    .info-row:last-child { border: 0; }
+    
+    .val { font-weight: 600; }
+    .good { color: #2e7d32; }
+    .medium { color: #f57f17; }
+    .bad { color: #d32f2f; }
+
+    .history-list {
+        list-style: none;
+        padding: 0;
+        margin: 10px 0 0;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    .history-item {
+        padding: 8px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    @keyframes blink { 50% { opacity: 0.5; } }
+
+    /* Responsive ปรับแต่งจอเล็ก */
+    @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        .header h1 { font-size: 24px; }
+        .panel { padding: 15px; }
+    }
 </style>
 </head>
-
 <body>
+
 <div class="page">
-  <div class="header">
-    <h1>🚋 Where’s My Tram?</h1>
-    <p>Real-time tracking. No more guessing. 👀</p>
-  </div>
-
-  <div class="layout">
-    <div class="panel">
-      <div class="top">
-        <div class="title">Live Tracking Map</div>
-        <div class="live">● LIVE</div>
-      </div>
-      <div class="map">
-        <img src="./a.png" alt="Map">
-        <div id="tram">🚋</div>
-      </div>
+    <div class="header">
+        <h1>🚋 Where’s My Tram?</h1>
+        <p>Real-time tracking. No more guessing. 👀</p>
     </div>
 
-    <div class="panel">
-      <div class="card">
-        <div class="row"><span class="label">📍 Station</span><span class="value" id="station">-</span></div>
-        <div class="row"><span class="label">📶 RSSI</span><span class="value" id="rssi">-</span></div>
-        <div class="row"><span class="label">🕒 Date & Time</span><span class="value" id="time">-</span></div>
-        <div class="row"><span class="label">⏱ ETA</span><span class="value" id="next">-</span></div>
-        <div class="note" id="updated">Last updated: -</div>
-      </div>
+    <div class="layout">
+        <div class="panel">
+            <div class="top-bar">
+                <div class="title">Live Tracking</div>
+                <div class="live-tag">● LIVE</div>
+            </div>
+            
+            <div class="map-box">
+                <div class="map-stage">
+                    <img src="./a.png" alt="University Map">
+                    <div id="tram">🚋</div>
+                </div>
+            </div>
+        </div>
 
-      <div class="card">
-        <h3>📜 History</h3>
-        <ul id="logs"><li>ยังไม่มีข้อมูล</li></ul>
-      </div>
+        <div class="panel">
+            <div class="info-card">
+                <div class="info-row">
+                    <span>📍 Station</span>
+                    <span id="st-name" class="val">-</span>
+                </div>
+                <div class="info-row">
+                    <span>📶 RSSI</span>
+                    <span id="st-rssi" class="val">-</span>
+                </div>
+                <div class="info-row">
+                    <span>🕒 Last Seen</span>
+                    <span id="st-time" class="val">-</span>
+                </div>
+                <div class="info-row">
+                    <span>⏱ Next Station</span>
+                    <span id="st-next" class="val">-</span>
+                </div>
+                <div style="font-size:11px; color:#999; margin-top:10px; text-align:right" id="update-tick">
+                    Last updated: -
+                </div>
+            </div>
+
+            <div class="info-card" style="margin-bottom:0">
+                <b style="font-size:14px">📜 History (Last 10)</b>
+                <div id="logs-container" class="history-list">
+                    <div class="history-item">ยังไม่มีข้อมูล</div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
-firebase.initializeApp({
-  databaseURL:"https://trackingrealtime-9a5a1-default-rtdb.firebaseio.com"
-});
-const db=firebase.database();
-
-const stations={
-  "ประตูเขียว":{x:9.5,y:40.5},
-  "โรงโภชนาการ 1":{x:48.5,y:24.5},
-  "หน้ามหาวิทยาลัย":{x:82.5,y:71.5}
+// --- 1. Firebase Setup ---
+const firebaseConfig = {
+    databaseURL: "https://trackingrealtime-9a5a1-default-rtdb.firebaseio.com"
 };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-const order=["ประตูเขียว","โรงโภชนาการ 1","หน้ามหาวิทยาลัย"];
-let lastUpdate=null;
+// --- 2. Configuration & Data ---
+const stations={
+  "ประตูเขียว":{x:10.0,y:41.5},
+  "โรงโภชนาการ 1":{x:48.0,y:16.8},
+  "หน้ามหาวิทยาลัย":{x:85,y:75.5}
+};
+const routeOrder = ["ประตูเขียว", "โรงโภชนาการ 1", "หน้ามหาวิทยาลัย"];
+let lastTimestamp = null;
 
-/* 🔥 แก้ตรงนี้: แสดง "วัน + เวลา" */
-function time(t){
-  if(!t)return "-";
-  return new Date(t).toLocaleString("th-TH",{
-    year:"numeric",
-    month:"short",
-    day:"numeric",
-    hour:"2-digit",
-    minute:"2-digit",
-    second:"2-digit"
-  });
+// --- 3. UI Helpers ---
+function getRssiStatus(rssi) {
+    const val = Number(rssi);
+    if (val >= -60) return { text: val + " dBm (Strong)", class: "good" };
+    if (val >= -80) return { text: val + " dBm (Fair)", class: "medium" };
+    return { text: val + " dBm (Weak)", class: "bad" };
 }
 
-function rssiText(r){
-  const n=Number(r);
-  if(isNaN(n))return {text:"-",cls:""};
-  if(n>=-60)return {text:n+" dBm · Strong",cls:"good"};
-  if(n>=-80)return {text:n+" dBm · Fair",cls:"medium"};
-  return {text:n+" dBm · Weak",cls:"bad"};
+function getETA(rssi) {
+    const val = Math.abs(Number(rssi));
+    // สูตรจำลองระยะทาง: ยิ่ง RSSI น้อย (ติดลบน้อย) ยิ่งใกล้
+    let sec = Math.round((val - 40) * 0.8); 
+    return Math.max(5, Math.min(59, sec));
 }
 
-function moveTram(station,rssi,t){
-  const p=stations[station];
-  if(!p)return;
+// --- 4. Main Update Function ---
+function updateLiveStatus(data) {
+    if (!data) return;
 
-  tram.style.left=p.x+"%";
-  tram.style.top=p.y+"%";
+    const { station, rssi, time } = data;
+    const tram = document.getElementById("tram");
+    const pos = stations[station];
 
-  document.getElementById("station").innerText=station;
+    if (pos) {
+        // อัปเดตตำแหน่งรถ (ใช้ % เพื่อให้ขยับตามรูป)
+        tram.style.left = pos.x + "%";
+        tram.style.top = pos.y + "%";
+        
+        // อัปเดตข้อความข้อมูล
+        document.getElementById("st-name").innerText = station;
+        document.getElementById("st-time").innerText = new Date(time).toLocaleTimeString("th-TH");
+        
+        const rssiInfo = getRssiStatus(rssi);
+        const rssiEl = document.getElementById("st-rssi");
+        rssiEl.innerText = rssiInfo.text;
+        rssiEl.className = "val " + rssiInfo.class;
 
-  const r=rssiText(rssi);
-  const rssiEl=document.getElementById("rssi");
-  rssiEl.innerText=r.text;
-  rssiEl.className="value "+r.cls;
-
-  document.getElementById("time").innerText=time(t);
-
-  const i=order.indexOf(station);
-  const next=i>=0?order[(i+1)%order.length]:"-";
-  document.getElementById("next").innerText=next==="-"?"-":next+" (~15s)";
-
-  lastUpdate=Date.now();
-  updateTime();
+        // คำนวณสถานีถัดไป
+        const idx = routeOrder.indexOf(station);
+        const nextSt = routeOrder[(idx + 1) % routeOrder.length];
+        document.getElementById("st-next").innerText = `${nextSt} (~${getETA(rssi)}s)`;
+        
+        lastTimestamp = Date.now();
+    }
 }
 
-function updateTime(){
-  document.getElementById("updated").innerText=
-    lastUpdate ? "Last updated: "+Math.floor((Date.now()-lastUpdate)/1000)+"s ago" : "Last updated: -";
-}
-
-db.ref("tram/status").on("value",snap=>{
-  const d=snap.val();
-  if(d)moveTram(d.station,d.rssi,d.time);
+// --- 5. Firebase Listeners ---
+db.ref("tram/status").on("value", snap => {
+    updateLiveStatus(snap.val());
 });
 
-db.ref("tram/logs").limitToLast(10).on("value",snap=>{
-  const list=document.getElementById("logs");
-  const data=snap.val();
-  list.innerHTML="";
-  if(!data){list.innerHTML="<li>ยังไม่มีข้อมูล</li>";return;}
-
-  Object.values(data)
-    .sort((a,b)=>new Date(b.time)-new Date(a.time))
-    .forEach(item=>{
-      const li=document.createElement("li");
-      li.innerText=(item.station||"-")+" | "+time(item.time);
-      list.appendChild(li);
-    });
+db.ref("tram/logs").limitToLast(10).on("value", snap => {
+    const container = document.getElementById("logs-container");
+    const data = snap.val();
+    container.innerHTML = "";
+    
+    if (data) {
+        Object.values(data).reverse().forEach(log => {
+            const timeStr = new Date(log.time).toLocaleTimeString("th-TH", {hour:'2-digit', minute:'2-digit'});
+            container.innerHTML += `
+                <div class="history-item">
+                    <span>${log.station}</span>
+                    <span style="color:#888">${timeStr}</span>
+                </div>`;
+        });
+    } else {
+        container.innerHTML = '<div class="history-item">ยังไม่มีข้อมูล</div>';
+    }
 });
 
-setInterval(updateTime,1000);
+// จับเวลาอัปเดตวินาที
+setInterval(() => {
+    if (lastTimestamp) {
+        const diff = Math.floor((Date.now() - lastTimestamp) / 1000);
+        document.getElementById("update-tick").innerText = `Last updated: ${diff}s ago`;
+    }
+}, 1000);
+
 </script>
 </body>
 </html>
