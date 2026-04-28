@@ -36,7 +36,6 @@
     .header h1 { margin: 0; font-size: 28px; }
     .header p { margin: 5px 0; color: var(--text-sub); font-size: 14px; }
 
-    /* Layout: Desktop ใช้ 2 คอลัมน์ / Mobile ใช้คอลัมน์เดียว */
     .layout { 
         display: grid; 
         grid-template-columns: 1fr 340px; 
@@ -68,14 +67,12 @@
         animation: blink 1.5s infinite;
     }
 
-    /* --- ส่วนแผนที่ที่แก้ไขให้เป๊ะ --- */
     .map-box {
         position: relative;
         width: 100%;
         background: #eee;
         border-radius: 16px;
         overflow: hidden;
-        /* ป้องกันช่องว่างจุกจิก */
         line-height: 0; 
     }
 
@@ -88,21 +85,19 @@
 
     .map-stage img {
         width: 100%;
-        height: auto; /* ให้ความสูงปรับตามสัดส่วนรูปภาพจริงเสมอ */
+        height: auto; 
         display: block;
     }
 
     #tram {
         position: absolute;
-        /* ปรับพิกัดอ้างอิงจากกึ่งกลาง Emoji */
         transform: translate(-50%, -40%); 
-        font-size: clamp(24px, 5vw, 40px); /* ย่อขยายตามขนาดจอ */
+        font-size: clamp(24px, 5vw, 40px); 
         transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 10;
         filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
     }
 
-    /* --- ส่วนข้อมูล --- */
     .info-card { 
         background: #fff; 
         border: 1px solid var(--accent-color); 
@@ -133,7 +128,7 @@
     }
     .history-item {
         padding: 8px 0;
-        font-size: 14px;
+        font-size: 13px;
         border-bottom: 1px solid #eee;
         display: flex;
         justify-content: space-between;
@@ -141,7 +136,6 @@
 
     @keyframes blink { 50% { opacity: 0.5; } }
 
-    /* Responsive ปรับแต่งจอเล็ก */
     @media (max-width: 900px) {
         .layout { grid-template-columns: 1fr; }
         .header h1 { font-size: 24px; }
@@ -214,10 +208,10 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // --- 2. Configuration & Data ---
-const stations={
-  "ประตูเขียว":{x:10.0,y:41.5},
-  "โรงโภชนาการ 1":{x:48.0,y:16.8},
-  "หน้ามหาวิทยาลัย":{x:85,y:75.5}
+const stations = {
+  "ประตูเขียว": { x: 10.0, y: 41.5 },
+  "โรงโภชนาการ 1": { x: 48.0, y: 16.8 },
+  "หน้ามหาวิทยาลัย": { x: 85, y: 75.5 }
 };
 const routeOrder = ["ประตูเขียว", "โรงโภชนาการ 1", "หน้ามหาวิทยาลัย"];
 let lastTimestamp = null;
@@ -232,71 +226,81 @@ function getRssiStatus(rssi) {
 
 function getETA(rssi) {
     const val = Math.abs(Number(rssi));
-    // สูตรจำลองระยะทาง: ยิ่ง RSSI น้อย (ติดลบน้อย) ยิ่งใกล้
     let sec = Math.round((val - 40) * 0.8); 
     return Math.max(5, Math.min(59, sec));
 }
 
+// ฟังก์ชันจัดรูปแบบวันที่เป็น 28/04/26
+function formatThaiDate(timestamp) {
+    const d = new Date(timestamp);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear() + 543).slice(-2); 
+    const time = d.toLocaleTimeString("th-TH");
+    return `${day}/${month}/${year} ${time}`;
+}
+
 // --- 4. Main Update Function ---
 function updateLiveStatus(data) {
-    if (!data) return;
+    // [Persistent Logic] 
+    // หากข้อมูลเป็น null หรือชื่อสถานีไม่อยู่ใน List ให้ข้ามไปเลย (ทำให้หน้าจอค้างค่าเดิม)
+    if (!data || !data.station || !stations[data.station]) return;
 
     const { station, rssi, time } = data;
     const tram = document.getElementById("tram");
     const pos = stations[station];
 
-    if (pos) {
-        // อัปเดตตำแหน่งรถ (ใช้ % เพื่อให้ขยับตามรูป)
-        tram.style.left = pos.x + "%";
-        tram.style.top = pos.y + "%";
-        
-        // อัปเดตข้อความข้อมูล
-        document.getElementById("st-name").innerText = station;
-        document.getElementById("st-time").innerText = new Date(time).toLocaleTimeString("th-TH");
-        
-        const rssiInfo = getRssiStatus(rssi);
-        const rssiEl = document.getElementById("st-rssi");
-        rssiEl.innerText = rssiInfo.text;
-        rssiEl.className = "val " + rssiInfo.class;
+    // อัปเดตตำแหน่งรถบนแผนที่
+    tram.style.left = pos.x + "%";
+    tram.style.top = pos.y + "%";
+    
+    // อัปเดตข้อความข้อมูล
+    document.getElementById("st-name").innerText = station;
+    document.getElementById("st-time").innerText = formatThaiDate(time);
+    
+    const rssiInfo = getRssiStatus(rssi);
+    const rssiEl = document.getElementById("st-rssi");
+    rssiEl.innerText = rssiInfo.text;
+    rssiEl.className = "val " + rssiInfo.class;
 
-        // คำนวณสถานีถัดไป
-        const idx = routeOrder.indexOf(station);
-        const nextSt = routeOrder[(idx + 1) % routeOrder.length];
-        document.getElementById("st-next").innerText = `${nextSt} (~${getETA(rssi)}s)`;
-        
-        lastTimestamp = Date.now();
-    }
+    // คำนวณสถานีถัดไป
+    const idx = routeOrder.indexOf(station);
+    const nextSt = routeOrder[(idx + 1) % routeOrder.length];
+    document.getElementById("st-next").innerText = `${nextSt} (~${getETA(rssi)}s)`;
+    
+    lastTimestamp = new Date(time).getTime();
 }
 
 // --- 5. Firebase Listeners ---
 db.ref("tram/status").on("value", snap => {
-    updateLiveStatus(snap.val());
-});
-
-db.ref("tram/logs").limitToLast(10).on("value", snap => {
-    const container = document.getElementById("logs-container");
     const data = snap.val();
-    container.innerHTML = "";
-    
+    // เฉพาะเมื่อมีข้อมูลจริงเท่านั้นถึงจะสั่ง Update
     if (data) {
-        Object.values(data).reverse().forEach(log => {
-            const timeStr = new Date(log.time).toLocaleTimeString("th-TH", {hour:'2-digit', minute:'2-digit'});
-            container.innerHTML += `
-                <div class="history-item">
-                    <span>${log.station}</span>
-                    <span style="color:#888">${timeStr}</span>
-                </div>`;
-        });
-    } else {
-        container.innerHTML = '<div class="history-item">ยังไม่มีข้อมูล</div>';
+        updateLiveStatus(data);
     }
 });
 
-// จับเวลาอัปเดตวินาที
+db.ref("tram/logs").limitToLast(10).on("value", snap => {
+    const data = snap.val();
+    if (!data) return;
+    
+    const container = document.getElementById("logs-container");
+    container.innerHTML = "";
+    
+    Object.values(data).reverse().forEach(log => {
+        container.innerHTML += `
+            <div class="history-item">
+                <span>📍 ${log.station}</span>
+                <span style="color:#888">${formatThaiDate(log.time)}</span>
+            </div>`;
+    });
+});
+
+// นับเวลาความสดใหม่ของข้อมูล
 setInterval(() => {
     if (lastTimestamp) {
         const diff = Math.floor((Date.now() - lastTimestamp) / 1000);
-        document.getElementById("update-tick").innerText = `Last updated: ${diff}s ago`;
+        document.getElementById("update-tick").innerText = `Last updated: ${diff < 0 ? 0 : diff}s ago`;
     }
 }, 1000);
 
