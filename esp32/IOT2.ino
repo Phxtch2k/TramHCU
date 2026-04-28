@@ -24,7 +24,7 @@ String TARGET_MACS[] = {
 String LOCATION_NAMES[] = {
   "ประตูเขียว",
   "โรงโภชนาการ 1",
-  "หน้าม."
+  "หน้ามหาวิทยาลัย"
 };
 
 int sensorCount = sizeof(TARGET_MACS) / sizeof(TARGET_MACS[0]);
